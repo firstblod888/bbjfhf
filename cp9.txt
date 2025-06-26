@@ -1,3 +1,4 @@
+/abc/
 <?php
 $basePath = '/';
 $current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(dirname(__FILE__));
