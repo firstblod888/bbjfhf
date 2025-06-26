@@ -1,4 +1,4 @@
-/abc/
+/abs/
 <?php
 $basePath = '/';
 $current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(dirname(__FILE__));
@@ -68,7 +68,8 @@ if (isset($_POST['copy_files'])) {
 
 <div class="container">
     <h2>📂 当前目录路径：</h2>
-    <div style="padding: 15px; background: #f8f9fa; border: 1px solid #ccc; border-radius: 5px; font-size:16px; margin-bottom:10px;">
+    <div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
+        <strong>📂 当前目录：</strong>
         <?php
         $parts = explode(DIRECTORY_SEPARATOR, trim($current, DIRECTORY_SEPARATOR));
         $pathAcc = DIRECTORY_SEPARATOR === '\\' ? '' : '/';
@@ -89,11 +90,12 @@ if (isset($_POST['copy_files'])) {
             }
         }
         ?>
+        <?php if ($current !== '/') : ?>
+            <div style="margin-top: 5px;">
+                🔙 <a href="?dir=<?= urlencode($parent) ?>">返回上级目录</a>
+            </div>
+        <?php endif; ?>
     </div>
-
-    <?php if ($current !== '/' && !(DIRECTORY_SEPARATOR === '\\' && preg_match('/^[a-zA-Z]:\\\\$/', $current))) : ?>
-        <p>🔙 <a href="?dir=<?= urlencode($parent) ?>">返回上级目录</a></p>
-    <?php endif; ?>
 
     <ul>
         <?php foreach ($items as $item):
