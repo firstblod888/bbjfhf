@@ -1,4 +1,39 @@
 <?php
+$current = isset($_GET['dir']) ? realpath($_GET['dir']) : getcwd();
+if (!$current || !is_dir($current)) $current = getcwd();
+$parent = dirname($current);
+?>
+
+<div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
+    <strong>📂 当前目录：</strong>
+    <?php
+    $parts = explode(DIRECTORY_SEPARATOR, trim($current, DIRECTORY_SEPARATOR));
+    $pathAcc = DIRECTORY_SEPARATOR === '\\' ? '' : '/';
+
+    if (DIRECTORY_SEPARATOR === '\\' && preg_match('/^[a-zA-Z]:$/', $parts[0])) {
+        $pathAcc = array_shift($parts);
+        echo '<a href="?dir=' . urlencode($pathAcc . DIRECTORY_SEPARATOR) . '">' . htmlspecialchars($pathAcc) . '</a>';
+        if (!empty($parts)) echo ' / ';
+        $pathAcc .= DIRECTORY_SEPARATOR;
+    }
+
+    foreach ($parts as $i => $part) {
+        $pathAcc .= $part . DIRECTORY_SEPARATOR;
+        $link = realpath($pathAcc);
+        if ($link) {
+            echo '<a href="?dir=' . urlencode($link) . '">' . htmlspecialchars($part) . '</a>';
+            if ($i < count($parts) - 1) echo ' / ';
+        }
+    }
+    ?>
+    <?php if ($current !== '/') : ?>
+        <div style="margin-top: 5px;">
+            🔙 <a href="?dir=<?= urlencode($parent) ?>">返回上级目录</a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php
 $basePath = '/';
 $current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(dirname(__FILE__));
 
