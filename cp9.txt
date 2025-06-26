@@ -1,6 +1,5 @@
-/abs/
+/abssss/
 <?php
-$basePath = '/';
 $current = isset($_GET['dir']) ? realpath($_GET['dir']) : realpath(dirname(__FILE__));
 
 if (!$current || !is_dir($current)) {
